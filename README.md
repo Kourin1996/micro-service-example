@@ -26,3 +26,9 @@ make start-client
 サーバ・クライアント間通信にはgRPCを使用しています。  
 protobufスキーマは`pkg1/pb`以下の`.proto`ファイルで定義しています。  
 同一ディレクトリの`.pb.go`は自動生成ファイルで、`make protoc`で再生成できます。 
+
+## 参考
+
+- https://grpc.io/docs/guides/auth/
+- https://dev.to/techschoolguru/how-to-secure-grpc-connection-with-ssl-tls-in-go-4ph
+- https://itnext.io/practical-guide-to-securing-grpc-connections-with-go-and-tls-part-1-f63058e9d6d1
