@@ -1,7 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"os/signal"
@@ -14,6 +17,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 func NewTerminateSignalCh() chan error {
@@ -27,12 +31,46 @@ func NewTerminateSignalCh() chan error {
 	return errCh
 }
 
+func loadTLSCredentials() (credentials.TransportCredentials, error) {
+	// CAの証明書をロード
+	pemClientCA, err := ioutil.ReadFile("./cert/ca-cert.pem")
+	if err != nil {
+		return nil, err
+	}
+
+	certPool := x509.NewCertPool()
+	if !certPool.AppendCertsFromPEM(pemClientCA) {
+		return nil, fmt.Errorf("failed to add client CA's certificate")
+	}
+
+	// サーバー側の証明書と秘密鍵をロード
+	serverCert, err := tls.LoadX509KeyPair("./cert/server-cert.pem", "./cert/server-key.pem")
+	if err != nil {
+		return nil, err
+	}
+
+	config := &tls.Config{
+		Certificates: []tls.Certificate{serverCert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    certPool,
+	}
+
+	return credentials.NewTLS(config), nil
+}
+
 func main() {
 	logger := log.NewJSONLogger(os.Stdout)
 
 	rentRepo := rr.NewRentRepository()
 	rentService := rs.NewService(logger, rentRepo)
 	rentServer := rc.NewGRPCServer(logger, rentService)
+
+	tlsCredentials, err := loadTLSCredentials()
+	if err != nil {
+		logger.Log("cannot load TLS credentials: ", err)
+
+		return
+	}
 
 	errCh := NewTerminateSignalCh()
 
@@ -43,7 +81,11 @@ func main() {
 	}
 
 	go func() {
-		baseServer := grpc.NewServer()
+		baseServer := grpc.NewServer(
+			grpc.Creds(tlsCredentials),
+			// grpc.UnaryInterceptor(interceptor.Unary()),
+			// grpc.StreamInterceptor(interceptor.Stream()),
+		)
 		pb.RegisterRentServiceServer(baseServer, rentServer)
 
 		level.Info(logger).Log("msg", "Server started successfully 🚀")

@@ -9,3 +9,7 @@ start-client:
 .PHONY: protoc
 protoc:
 	protoc --go_out=plugins=grpc:. ./pkg1/pb/rent.proto
+
+.PHONY: cert
+cert:
+	./cert.sh

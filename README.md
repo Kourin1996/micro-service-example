@@ -7,6 +7,9 @@ Go kitを使用したマイクロサービスのサンプルコード。
 ## How to start
 
 ```bash
+# 証明書生成
+make cert
+
 # サーバの起動
 make start-server
 
